@@ -3,7 +3,483 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name=<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
+<title>Quotation Calculator</title>
+<style>
+/* Layout: builder on the left (private), quote paper and internal summary on the right. Only the paper prints. */
+:root {
+  --bg:#f5f6f4; --surface:#ffffff; --surface2:#edf0ed; --fg:#14201d; --muted:#556360; --line:#cdd5d1; --accent:#0f766e; --accent-fg:#ffffff; --warn:#b45309; --danger:#b42318; --ok:#166534;
+  --sans: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg:#0f1514; --surface:#151d1b; --surface2:#1c2623; --fg:#e8efec; --muted:#a2b0aa; --line:#31403b; --accent:#5eead4; --accent-fg:#0b1220; --warn:#fbbf24; --danger:#fda29b; --ok:#86efac; color-scheme: dark; }
+}
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--fg); font-family:var(--sans); font-size:15px; line-height:1.45; padding: 0 max(16px, env(safe-area-inset-right)) 60px max(16px, env(safe-area-inset-left)); }
+.top { max-width:1280px; margin:0 auto; padding:18px 0 10px; display:flex; flex-wrap:wrap; gap:10px 20px; align-items:center; justify-content:space-between; }
+.top h1 { font-size:22px; margin:0; } .top p { margin:0; color:var(--muted); font-size:13px; }
+.tabs { display:inline-flex; border:1px solid var(--line); border-radius:6px; overflow:hidden; }
+.tabs button { font:inherit; padding:8px 16px; border:0; background:var(--surface); color:var(--fg); cursor:pointer; border-right:1px solid var(--line); }
+.tabs button:last-child { border-right:0; } .tabs button[aria-pressed="true"] { background:var(--fg); color:var(--bg); }
+.grid { max-width:1280px; margin:0 auto; display:grid; grid-template-columns: minmax(0, 560px) minmax(0, 1fr); gap:22px; align-items:start; }
+@media (max-width: 1100px) { .grid { grid-template-columns: minmax(0,1fr); } }
+.col { display:flex; flex-direction:column; gap:16px; min-width:0; }
+.card { background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:16px; }
+.card h2 { font-size:15px; margin:0 0 10px; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.card h2 small { font-weight:400; color:var(--muted); font-size:12px; }
+label.f { display:block; font-size:12px; color:var(--muted); margin-bottom:3px; }
+input[type=text], input[type=number], input[type=date], select, textarea { width:100%; font:inherit; font-size:14px; padding:7px 9px; border:1px solid var(--line); border-radius:5px; background:var(--surface); color:var(--fg); }
+textarea { min-height:64px; resize:vertical; }
+.two { display:grid; grid-template-columns:1fr 1fr; gap:10px; } .three { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+.btn { font:inherit; font-size:14px; padding:8px 13px; border-radius:6px; border:1px solid var(--accent); background:var(--accent); color:var(--accent-fg); cursor:pointer; font-weight:600; }
+.btn.alt { background:transparent; color:var(--fg); border-color:var(--line); font-weight:400; }
+.btn.sm { padding:4px 9px; font-size:12.5px; }
+.btn:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, .tabs button:focus-visible { outline:3px solid var(--accent); outline-offset:1px; }
+.row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+.catgrp { margin-bottom:10px; } .catgrp h3 { font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin:0 0 5px; }
+.chips { display:flex; flex-wrap:wrap; gap:6px; }
+.add { font:inherit; font-size:13px; padding:5px 9px; border:1px solid var(--line); border-radius:999px; background:var(--surface2); color:var(--fg); cursor:pointer; }
+.add:hover { border-color:var(--accent); } .add span { color:var(--muted); font-size:12px; }
+.line { border:1px solid var(--line); border-radius:6px; padding:9px 10px; margin-bottom:8px; display:grid; grid-template-columns: minmax(0,1fr) auto; gap:6px 10px; align-items:center; }
+.line .nm { font-weight:600; } .line .meta { grid-column:1 / -1; display:flex; flex-wrap:wrap; gap:8px 12px; align-items:center; font-size:13px; color:var(--muted); }
+.line select { width:auto; max-width:100%; } .qty { display:inline-flex; align-items:center; gap:4px; } .qty input { width:54px; text-align:center; }
+.x { border:0; background:transparent; color:var(--muted); font-size:18px; cursor:pointer; line-height:1; padding:2px 6px; }
+.amt { font-variant-numeric: tabular-nums; font-weight:600; text-align:right; }
+.muted { color:var(--muted); } .small { font-size:12.5px; }
+.kv { display:grid; grid-template-columns:1fr auto; gap:5px 12px; font-size:14px; } .kv b { font-variant-numeric: tabular-nums; text-align:right; } .kv .tot { font-size:17px; padding-top:6px; border-top:1px solid var(--line); }
+.warn { color:var(--warn); } .bad { color:var(--danger); } .ok { color:var(--ok); }
+.guess { font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; background:var(--surface2); color:var(--warn); padding:1px 5px; border-radius:3px; margin-left:5px; }
+table.pl { width:100%; border-collapse:collapse; font-size:14px; } .pl th, .pl td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); vertical-align:middle; } .pl th { font-size:12px; color:var(--muted); font-weight:600; }
+.pl input[type=number] { width:100px; } .pl input[type=text] { min-width:140px; } .pl td.n input { width:70px; }
+.scroll { overflow-x:auto; }
+/* ===== The quote paper (always light, mirrors the printed page) ===== */
+#paperWrap { overflow-x:auto; padding-bottom:6px; }
+#paper { width:190mm; min-height:100px; margin:0 auto; background:#fff; color:#14201d; padding:0; font-size:11px; line-height:1.4; border:1px solid var(--line); box-shadow:0 1px 6px rgba(0,0,0,.08); }
+#paper .in { padding:11mm 11mm 10mm; }
+#paper .hd { display:flex; justify-content:space-between; gap:12mm; border-bottom:2px solid #0f766e; padding-bottom:5mm; }
+#paper h2 { font-size:22px; margin:0 0 2px; letter-spacing:-.01em; display:block; }
+#paper .co { color:#4a5854; font-size:10.5px; }
+#paper .mt { text-align:right; font-size:10.5px; color:#4a5854; white-space:nowrap; } #paper .mt b { color:#14201d; }
+#paper .to { margin:5mm 0 4mm; display:grid; grid-template-columns:1fr 1fr; gap:6mm; }
+#paper .lab { font-size:8.5px; letter-spacing:.12em; text-transform:uppercase; color:#5d6b66; font-weight:700; margin-bottom:1px; }
+#paper table { width:100%; border-collapse:collapse; }
+#paper th { text-align:left; font-size:8.5px; letter-spacing:.1em; text-transform:uppercase; color:#5d6b66; border-bottom:1.5px solid #14201d; padding:2mm 2mm; }
+#paper td { padding:1.8mm 2mm; border-bottom:1px solid #dde3e0; vertical-align:top; }
+#paper td.q, #paper th.q { text-align:center; width:12mm; } #paper td.a, #paper th.a { text-align:right; width:32mm; font-variant-numeric:tabular-nums; }
+#paper .tot { display:flex; justify-content:flex-end; margin-top:3mm; } #paper .tot div { min-width:78mm; }
+#paper .tot .r { display:flex; justify-content:space-between; padding:1mm 2mm; } #paper .tot .big { font-size:15px; font-weight:700; border-top:2px solid #14201d; margin-top:1mm; padding-top:2mm; }
+#paper .blocks { display:grid; grid-template-columns:1fr 1fr; gap:6mm; margin-top:5mm; }
+#paper .blocks p, #paper .blocks ul { margin:0; } #paper ul { padding-left:4mm; } #paper .nt { white-space:pre-wrap; }
+#paper .ft { margin-top:5mm; padding-top:3mm; border-top:1px solid #dde3e0; font-size:9.5px; color:#5d6b66; display:flex; justify-content:space-between; gap:6mm; }
+#paper .empty { padding:10mm 0; text-align:center; color:#6c7a75; }
+@page { size: A4; margin: 10mm; }
+@media print {
+  body { background:#fff; padding:0; } .noprint { display:none !important; }
+  .grid { display:block; max-width:none; } .col { display:block; }
+  #paperWrap { overflow:visible; padding:0; } #paper { border:0; box-shadow:none; width:190mm; margin:0; }
+}
+.four { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; } @media (max-width:800px){ .four{grid-template-columns:1fr 1fr;} .three{grid-template-columns:1fr;} }
+.stack { display:flex; flex-direction:column; gap:16px; }
+.bigtot { display:flex; justify-content:space-between; align-items:baseline; } .bigtot b { font-size:30px; font-variant-numeric:tabular-nums; }
+.chk { display:inline-flex; gap:5px; align-items:center; font-size:13px; color:var(--muted); }
+.pitem { border:1px solid var(--line); border-radius:8px; padding:12px; margin-bottom:12px; }
+.phead { display:flex; flex-wrap:wrap; gap:10px 14px; align-items:flex-start; margin-bottom:10px; }
+table.lv { width:100%; border-collapse:collapse; font-size:14px; } .lv th { text-align:left; font-size:12px; color:var(--muted); font-weight:600; padding:4px 6px; } .lv td { padding:4px 6px; vertical-align:middle; } .lv td.cs { font-weight:600; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.lv input[type=number] { width:100px; } .lv td:nth-child(4) input, .lv td:nth-child(5) input { width:76px; } .lv td:first-child input { min-width:160px; }
+body.is-set { background:var(--surface2); }
+</style>
+</head>
+<body>
+<header class="top noprint">
+  <div><h1>Quotation calculator</h1><p id="modeNote">Live quote. Safe to share your screen.</p></div>
+  <div class="row"><button type="button" class="btn alt sm" id="modeBtn">Settings</button></div>
+</header>
+
+<!-- ============ LIVE VIEW (client-safe) ============ -->
+<main id="viewLive" class="grid">
+  <div class="col noprint">
+    <section class="card"><h2>Client and project</h2>
+      <div class="two"><div><label class="f" for="client">Client</label><input type="text" id="client" data-q="client" placeholder="Company or person"></div><div><label class="f" for="contact">Contact</label><input type="text" id="contact" data-q="contact" placeholder="Name, email or phone"></div></div>
+      <div style="height:8px"></div>
+      <div class="two"><div><label class="f" for="title">Project</label><input type="text" id="title" data-q="title" placeholder="e.g. Guided sales system"></div><div><label class="f" for="date">Date</label><input type="date" id="date" data-q="date"></div></div>
+    </section>
+    <section class="card"><h2>Start from a package <small>replaces the lines below</small></h2>
+      <div class="row"><button class="btn alt sm" type="button" data-preset="launch">Launch</button><button class="btn alt sm" type="button" data-preset="convert">Convert</button><button class="btn alt sm" type="button" data-preset="full">Full growth</button><button class="btn alt sm" type="button" data-preset="clear">Clear</button></div>
+    </section>
+    <section class="card"><h2>Add items</h2>
+      <input type="text" id="find" placeholder="Search items" aria-label="Search items" style="margin-bottom:10px">
+      <div id="palette"></div>
+    </section>
+    <section class="card"><h2>Custom line <small>anything not on the list, or a discount (use a minus)</small></h2>
+      <div class="row"><input type="text" id="cName" placeholder="What is it" style="flex:2;min-width:160px"><input type="number" id="cPrice" placeholder="Price ₦" style="flex:1;min-width:100px"><input type="number" id="cDays" placeholder="Days" min="0" step="0.5" style="width:80px"><button class="btn sm" type="button" id="cAdd">Add</button></div>
+      <p class="small muted" style="margin:6px 0 0">The price you type is the exact amount the client sees.</p>
+    </section>
+    <section class="card"><h2>Quote lines <small id="lineCount"></small></h2><div id="lines"></div></section>
+    <section class="card"><h2>Payment schedule</h2><div id="pays"></div><div class="row" style="margin-top:6px"><button class="btn alt sm" type="button" id="addPay">Add milestone</button><span class="small" id="payWarn"></span></div></section>
+    <section class="card"><h2>Costs paid by the client to providers <small>listed, not in the total</small></h2><div id="pass"></div><button class="btn alt sm" type="button" id="addPass" style="margin-top:6px">Add cost</button></section>
+    <section class="card"><h2>Notes on the quote</h2><textarea id="notes" data-q="notes"></textarea></section>
+  </div>
+  <div class="col">
+    <section class="card noprint"><div class="bigtot"><span>Total</span><b id="liveTotal">₦0</b></div><p class="small muted" id="liveMeta" style="margin:2px 0 12px"></p>
+      <div class="row"><button class="btn" type="button" id="printBtn">Print or save as PDF</button><button class="btn alt" type="button" id="copyBtn">Copy as text</button><span class="small muted" id="copyMsg"></span></div>
+      <hr style="border:0;border-top:1px solid var(--line);margin:14px 0">
+      <label class="f" for="saveName">Save this quote</label>
+      <div class="row"><input type="text" id="saveName" style="flex:1;min-width:160px" placeholder="Name"><button class="btn alt sm" type="button" id="saveBtn">Save</button></div>
+      <div id="saved" style="margin-top:8px"></div>
+    </section>
+    <div id="paperWrap"><article id="paper" aria-label="Quote preview"></article></div>
+  </div>
+</main>
+
+<!-- ============ SETTINGS VIEW (private) ============ -->
+<main id="viewSet" class="noprint" hidden style="max-width:1100px;margin:0 auto">
+  <div class="stack">
+    <section class="card"><h2>How it works</h2>
+      <p class="small" style="margin:0">For each item you set <b>Your price</b>, the amount you want to earn. <b>Client sees</b> is that price plus your buffer, rounded to the nearest ₦1,000. Only the Client sees amount ever appears in the live view and on the printed quote.</p></section>
+    <section class="card"><h2>Your numbers</h2>
+      <div class="four">
+        <div><label class="f" for="buffer">Buffer % added to every price</label><input type="number" id="buffer" min="0" step="0.5" data-s="buffer"></div>
+        <div><label class="f" for="repeat">Repeat items cost % of full</label><input type="number" id="repeat" min="0" max="100" data-s="repeat"></div>
+        <div><label class="f" for="rush">Priority start fee %</label><input type="number" id="rush" min="0" data-s="rush"></div>
+        <div><label class="f" for="floor">Lowest ₦ per hour you accept</label><input type="number" id="floor" min="0" data-s="floor" placeholder="optional"></div>
+      </div><div style="height:10px"></div>
+      <div class="four">
+        <div><label class="f" for="dpw">Work days per week</label><input type="number" id="dpw" min="1" max="7" data-s="daysPerWeek"></div>
+        <div><label class="f" for="delay">Wait before start (days)</label><input type="number" id="delay" min="0" data-s="delay"></div>
+        <div><label class="f" for="valid">Quote valid for (days)</label><input type="number" id="valid" min="1" data-s="validDays"></div>
+        <div><label class="f" for="pin">Settings PIN (optional)</label><input type="text" id="pin" data-s="pin" placeholder="blank = no PIN" autocomplete="off"></div>
+      </div>
+      <label style="display:flex;gap:8px;align-items:center;margin-top:12px;font-size:14px"><input type="checkbox" id="rushOn"> Add the priority start fee to the current quote</label>
+    </section>
+    <section class="card"><h2>Profit check on the current quote</h2><div class="kv" id="kv"></div><p class="small" id="fitMsg" style="margin:10px 0 0"></p></section>
+    <section class="card"><h2>Price list <small id="itemCount"></small></h2>
+      <div class="row" style="margin-bottom:12px"><input type="text" id="plFind" placeholder="Search the price list" aria-label="Search" style="flex:1;min-width:180px"><button class="btn" type="button" id="newItem">+ New item</button></div>
+      <div id="pl"></div>
+      <div class="row" style="margin-top:12px"><button class="btn alt" type="button" id="resetBtn">Reset price list to my starting values</button><span class="small muted" id="resetMsg"></span></div>
+    </section>
+    <section class="card"><h2>Your details on the quote</h2>
+      <div class="three"><div><label class="f" for="b1">Business name</label><input type="text" id="b1" data-s="b1"></div><div><label class="f" for="b2">Line 2</label><input type="text" id="b2" data-s="b2"></div><div><label class="f" for="b3">Line 3</label><input type="text" id="b3" data-s="b3"></div></div>
+      <div style="height:10px"></div><label class="f" for="defNotes">Default notes for new quotes</label><textarea id="defNotes" data-s="defNotes"></textarea>
+    </section>
+    <section class="card"><h2>Backup <small>your data lives in this browser only</small></h2>
+      <div class="row"><button class="btn alt" type="button" id="expBtn">Download backup</button><label class="btn alt" style="cursor:pointer">Restore backup<input type="file" id="impFile" accept=".json,application/json" hidden></label><span class="small muted" id="bkMsg"></span></div></section>
+  </div>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  var LS = { cat: "qc_catalog_v2", set: "qc_settings_v2", saved: "qc_saved_v2" };
+  function lget(k, d) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
+  function lset(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  function T(l, p, d, h, g) { return { l: l, p: p, d: d, h: h, g: g ? 1 : 0 }; }
+  var DEFAULT_CATALOG = [
+    { id: "text_page", cat: "Pages and forms", name: "Plain text page", rep: true, tiers: [T("", 50000, 0.5, 4)] },
+    { id: "designed_page", cat: "Pages and forms", name: "Designed page (sections, images)", rep: true, tiers: [T("", 80000, 0.75, 6, 1)] },
+    { id: "vsl_page", cat: "Pages and forms", name: "Landing page with video (VSL)", rep: false, tiers: [T("", 90000, 1, 8, 1)] },
+    { id: "form_plain", cat: "Pages and forms", name: "Plain form, no logic", rep: true, tiers: [T("", 50000, 0.5, 4)] },
+    { id: "form_logic", cat: "Pages and forms", name: "Multi-step form with logic", rep: true, tiers: [T("", 120000, 1, 8)] },
+    { id: "upload_form", cat: "Pages and forms", name: "File-upload form with secure storage", rep: false, tiers: [T("Standard", 180000, 2, 16, 1), T("Advanced (several files, review step)", 260000, 4, 32, 1)] },
+    { id: "auto", cat: "Automation and systems", name: "Back-end automation", rep: false, tiers: [T("Simple", 150000, 1, 8), T("Standard", 220000, 2, 16, 1), T("Complex", 300000, 4, 32)] },
+    { id: "followup", cat: "Automation and systems", name: "Follow-up system", rep: false, tiers: [T("", 250000, 3, 24)] },
+    { id: "gtm", cat: "Automation and systems", name: "GTM engineering (complex system)", rep: false, tiers: [T("Core", 500000, 5, 40), T("Extended", 750000, 8, 64, 1), T("Full", 1000000, 12, 96)] },
+    { id: "whatsapp", cat: "Automation and systems", name: "WhatsApp click-to-chat flow, pre-filled", rep: true, tiers: [T("", 60000, 0.5, 4, 1)] },
+    { id: "paystack", cat: "Integrations", name: "Paystack integration", rep: false, tiers: [T("Simple", 120000, 1, 8, 1), T("Standard (verification, receipts)", 180000, 2, 16, 1), T("Advanced (splits, subscriptions)", 250000, 3, 24, 1)] },
+    { id: "booking", cat: "Integrations", name: "Zoom / Google Meet booking integration", rep: false, tiers: [T("Simple (booking link)", 80000, 1, 8, 1), T("Standard (slots, calendar sync, auto link)", 150000, 2, 16, 1)] },
+    { id: "ga4", cat: "Tracking and growth", name: "Tracking setup (GA4 events)", rep: false, tiers: [T("Basic", 60000, 1, 8, 1), T("Funnel events and source tags", 100000, 1.5, 12, 1), T("Site-wide and conversions", 150000, 2.5, 20, 1)] },
+    { id: "pixel", cat: "Tracking and growth", name: "Meta Pixel and Conversion API", rep: false, tiers: [T("Pixel only", 60000, 1, 8, 1), T("Pixel and Conversion API", 140000, 2, 16, 1)] },
+    { id: "cookie", cat: "Tracking and growth", name: "Cookie consent banner", rep: false, tiers: [T("", 40000, 0.5, 4, 1)] },
+    { id: "seo", cat: "Tracking and growth", name: "SEO foundation", rep: false, tiers: [T("Small site (up to 5 pages)", 80000, 1.5, 12, 1), T("Standard (up to 15 pages)", 150000, 2.5, 20, 1), T("Large (up to 30 pages)", 250000, 4, 32, 1)] },
+    { id: "dash", cat: "Tracking and growth", name: "Reporting dashboard (Looker Studio)", rep: false, tiers: [T("", 100000, 2, 16, 1)] },
+    { id: "domain", cat: "Setup and support", name: "Domain and hosting setup", rep: false, tiers: [T("Basic (connect domain, SSL)", 40000, 0.5, 4, 1), T("Full (DNS, business email, migration)", 80000, 1, 8, 1)] },
+    { id: "training", cat: "Setup and support", name: "Team walkthrough and training", rep: false, tiers: [T("", 30000, 0.5, 4, 1)] },
+    { id: "support", cat: "Setup and support", name: "Monthly support and fixes (per month)", rep: false, tiers: [T("", 60000, 0, 6, 1)] }
+  ];
+  var DEF_NOTES = "Prices are fixed for the scope listed above and are in Nigerian naira.\nAnything outside this scope is quoted separately before work starts.";
+  var DEFAULT_SETTINGS = { buffer: 12, repeat: 60, floor: "", daysPerWeek: 7, delay: 0, rush: 20, rushOn: false, validDays: 14, pin: "", b1: "Tubalcain Ads Enterprise", b2: "Alajayibo Mystery, Go-to-Market Engineer", b3: "tubalcainmy.github.io/alajayibomystery", defNotes: DEF_NOTES, pays: [{ l: "Deposit to start work", p: 50 }, { l: "On handover", p: 50 }] };
+
+  var catalog = lget(LS.cat, null) || JSON.parse(JSON.stringify(DEFAULT_CATALOG));
+  var S = Object.assign({}, DEFAULT_SETTINGS, lget(LS.set, {}));
+  var Q = { client: "", contact: "", title: "", ref: "", date: "", notes: S.defNotes, lines: [], pass: [{ n: "Paystack transaction fees", a: "per transaction" }, { n: "Domain and hosting renewals", a: "from the provider" }] };
+  var uid = 1, resetArm = false, mode = "live";
+
+  function $(id) { return document.getElementById(id); }
+  function today() { var d = new Date(); return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2); }
+  Q.date = today(); Q.ref = "Q-" + Q.date.replace(/-/g, "") + "-01";
+  function item(id) { for (var i = 0; i < catalog.length; i++) if (catalog[i].id === id) return catalog[i]; return null; }
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function naira(n) { return (n < 0 ? "-" : "") + "₦" + Math.abs(Math.round(n)).toLocaleString("en-US"); }
+  function roundK(x) { return Math.round(x / 1000) * 1000; }
+  function num(v, d) { var n = parseFloat(v); return isFinite(n) ? n : (d || 0); }
+  function clientPrice(p) { return roundK(p * (1 + S.buffer / 100)); }
+  function lineName(it) { return it.name; }
+
+  /* ---------- calculation ---------- */
+  function calc() {
+    var rows = [], base = 0, cs = 0, days = 0, hours = 0;
+    Q.lines.forEach(function (l) {
+      var q = Math.max(1, l.qty), b, c, d, h, name, sub = "";
+      if (l.custom) { b = c = l.price * q; d = (l.days || 0) * q; h = d * 8; name = l.name || "Custom item"; }
+      else {
+        var it = item(l.itemId); if (!it) return;
+        var t = it.tiers[Math.min(l.tier, it.tiers.length - 1)], f = l.repeatOn && q > 1 ? 1 + (q - 1) * (S.repeat / 100) : q;
+        b = t.p * f; c = roundK(b * (1 + S.buffer / 100)); d = t.d * f; h = t.h * f; name = it.name; sub = t.l;
+      }
+      base += b; cs += c; days += d; hours += h;
+      rows.push({ l: l, name: name, sub: sub, base: b, client: c });
+    });
+    var rush = S.rushOn ? roundK(cs * S.rush / 100) : 0, total = cs + rush;
+    var cal = Math.ceil(days * 7 / Math.max(1, S.daysPerWeek)) + Math.max(0, S.delay);
+    var pays = S.pays.map(function (p) { return { l: p.l, p: p.p, a: 0 }; }), acc = 0;
+    pays.forEach(function (p, i) { if (i < pays.length - 1) { p.a = roundK(total * p.p / 100); acc += p.a; } else p.a = Math.max(0, total - acc); });
+    return { rows: rows, base: base, cs: cs, buffer: cs - base, rush: rush, total: total, days: days, hours: hours, cal: cal, pays: pays };
+  }
+
+  /* ---------- live view ---------- */
+  function renderPalette() {
+    var f = ($("find").value || "").toLowerCase(), cats = [], h = "";
+    catalog.forEach(function (it) { if (cats.indexOf(it.cat) < 0) cats.push(it.cat); });
+    cats.forEach(function (c) {
+      var its = catalog.filter(function (i) { return i.cat === c && (!f || i.name.toLowerCase().indexOf(f) >= 0); });
+      if (!its.length) return;
+      h += '<div class="catgrp"><h3>' + esc(c) + '</h3><div class="chips">';
+      its.forEach(function (it) {
+        var lo = Math.min.apply(null, it.tiers.map(function (t) { return t.p; }));
+        h += '<button type="button" class="add" data-add="' + esc(it.id) + '">+ ' + esc(it.name) + ' <span>' + (it.tiers.length > 1 ? "from " : "") + naira(clientPrice(lo)) + "</span></button>";
+      });
+      h += "</div></div>";
+    });
+    $("palette").innerHTML = h || '<p class="small muted" style="margin:0">No items match.</p>';
+  }
+  function renderLines(c) {
+    var h = "";
+    if (!Q.lines.length) h = '<p class="muted small" style="margin:0">No lines yet. Add items above or load a package.</p>';
+    c.rows.forEach(function (r) {
+      var l = r.l, it = l.custom ? null : item(l.itemId);
+      h += '<div class="line"><div class="nm">' + esc(r.name) + '</div><div class="amt">' + naira(r.client) + '</div><div class="meta">';
+      if (it && it.tiers.length > 1) {
+        h += '<select data-line="' + l.id + '" data-f="tier" aria-label="Level">';
+        it.tiers.forEach(function (t, i) { h += '<option value="' + i + '"' + (i === l.tier ? " selected" : "") + ">" + esc(t.l) + " · " + naira(clientPrice(t.p)) + "</option>"; });
+        h += "</select>";
+      }
+      h += '<span class="qty"><button class="btn alt sm" type="button" data-step="' + l.id + '" data-d="-1" aria-label="Less">−</button><input type="number" min="1" value="' + l.qty + '" data-line="' + l.id + '" data-f="qty" aria-label="Quantity"><button class="btn alt sm" type="button" data-step="' + l.id + '" data-d="1" aria-label="More">+</button></span>';
+      if (it && it.rep && l.qty > 1) h += '<label class="chk"><input type="checkbox" data-line="' + l.id + '" data-f="repeatOn"' + (l.repeatOn ? " checked" : "") + "> repeat pricing</label>";
+      if (l.custom) h += '<label class="chk">price <input type="number" value="' + l.price + '" data-line="' + l.id + '" data-f="price" style="width:110px" aria-label="Price"></label>';
+      h += '<button class="x" type="button" data-del="' + l.id + '" aria-label="Remove">✕</button></div></div>';
+    });
+    $("lines").innerHTML = h;
+    $("lineCount").textContent = c.rows.length ? c.rows.length + " line" + (c.rows.length > 1 ? "s" : "") : "";
+  }
+  function renderPays(c) {
+    var h = "";
+    S.pays.forEach(function (p, i) {
+      h += '<div class="row" style="margin-bottom:6px"><input type="text" style="flex:1;min-width:140px" value="' + esc(p.l) + '" data-pay="' + i + '" data-f="l" aria-label="Milestone"><input type="number" style="width:76px" value="' + p.p + '" data-pay="' + i + '" data-f="p" aria-label="Percent"><span class="small">%</span><span class="small muted" style="min-width:96px;text-align:right">' + naira(c.pays[i] ? c.pays[i].a : 0) + '</span><button class="x" type="button" data-delpay="' + i + '" aria-label="Remove">✕</button></div>';
+    });
+    $("pays").innerHTML = h;
+    var sum = S.pays.reduce(function (a, p) { return a + num(p.p); }, 0), w = $("payWarn"); w.textContent = sum === 100 ? "" : "Percentages add up to " + sum + ", not 100."; w.className = "small bad";
+  }
+  function renderPass() {
+    var h = "";
+    Q.pass.forEach(function (p, i) { h += '<div class="row" style="margin-bottom:6px"><input type="text" style="flex:1;min-width:140px" value="' + esc(p.n) + '" data-pass="' + i + '" data-f="n" aria-label="Cost"><input type="text" style="width:150px" value="' + esc(p.a) + '" data-pass="' + i + '" data-f="a" aria-label="Amount"><button class="x" type="button" data-delpass="' + i + '" aria-label="Remove">✕</button></div>'; });
+    $("pass").innerHTML = h;
+  }
+  function fmtDate(s) { try { return new Date(s + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }); } catch (e) { return s; } }
+  function validUntil() { try { var d = new Date(Q.date + "T00:00:00"); d.setDate(d.getDate() + Math.max(1, S.validDays)); return d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }); } catch (e) { return ""; } }
+  function renderPaper(c) {
+    var h = '<div class="in"><div class="hd"><div><h2>Quotation</h2><div class="co"><b style="color:#14201d">' + esc(S.b1) + "</b><br>" + esc(S.b2) + "<br>" + esc(S.b3) + '</div></div><div class="mt">Quote no. <b>' + esc(Q.ref) + "</b><br>Date <b>" + esc(fmtDate(Q.date)) + "</b><br>Valid until <b>" + esc(validUntil()) + "</b></div></div>";
+    h += '<div class="to"><div><div class="lab">Prepared for</div><b>' + esc(Q.client || "Client name") + "</b>" + (Q.contact ? "<br>" + esc(Q.contact) : "") + '</div><div><div class="lab">Project</div><b>' + esc(Q.title || "Project title") + "</b></div></div>";
+    if (!c.rows.length) h += '<div class="empty">Add items to build the quote.</div>';
+    else {
+      h += '<table><thead><tr><th>Item</th><th class="q">Qty</th><th class="a">Amount</th></tr></thead><tbody>';
+      c.rows.forEach(function (r) { h += "<tr><td>" + esc(r.name) + (r.sub ? '<br><span style="color:#5d6b66;font-size:10px">' + esc(r.sub) + "</span>" : "") + '</td><td class="q">' + r.l.qty + '</td><td class="a">' + naira(r.client) + "</td></tr>"; });
+      if (c.rush) h += '<tr><td>Priority start<br><span style="color:#5d6b66;font-size:10px">Work begins ahead of the normal schedule</span></td><td class="q">1</td><td class="a">' + naira(c.rush) + "</td></tr>";
+      h += '</tbody></table><div class="tot"><div><div class="r big"><span>Total</span><span>' + naira(c.total) + "</span></div></div></div>";
+    }
+    h += '<div class="blocks"><div><div class="lab">Estimated delivery</div><p>' + (c.rows.length ? "About <b>" + c.cal + " days</b> from kickoff" : "-") + "</p>";
+    if (S.pays.length && c.rows.length) { h += '<div class="lab" style="margin-top:3mm">Payment schedule</div><ul>'; c.pays.forEach(function (p) { h += "<li>" + esc(p.l) + " (" + num(p.p) + "%): <b>" + naira(p.a) + "</b></li>"; }); h += "</ul>"; }
+    h += "</div><div>";
+    var pass = Q.pass.filter(function (p) { return (p.n || "").trim(); });
+    if (pass.length) { h += '<div class="lab">Paid by you directly to providers, not included above</div><ul>'; pass.forEach(function (p) { h += "<li>" + esc(p.n) + (p.a ? ": " + esc(p.a) : "") + "</li>"; }); h += "</ul>"; }
+    if ((Q.notes || "").trim()) h += '<div class="lab" style="margin-top:3mm">Notes</div><p class="nt">' + esc(Q.notes) + "</p>";
+    h += '</div></div><div class="ft"><span>Thank you for the opportunity to work with you.</span><span>' + esc(Q.ref) + "</span></div></div>";
+    $("paper").innerHTML = h;
+  }
+  var PAGE_PX = 277 * 3.7795 - 10;
+  function fitScale() { var p = $("paper"); p.style.zoom = ""; var hg = p.offsetHeight; return hg > PAGE_PX ? PAGE_PX / hg : 1; }
+  function renderTotals(c) {
+    $("liveTotal").textContent = naira(c.total);
+    $("liveMeta").textContent = c.rows.length ? "About " + c.cal + " days from kickoff" : "Nothing added yet";
+  }
+  function renderSaved() {
+    var list = lget(LS.saved, []), h = "";
+    list.forEach(function (s, i) { h += '<div class="row" style="margin-bottom:4px"><span style="flex:1;min-width:120px">' + esc(s.name) + '</span><button class="btn alt sm" type="button" data-load="' + i + '">Load</button><button class="x" type="button" data-delsaved="' + i + '" aria-label="Delete">✕</button></div>'; });
+    $("saved").innerHTML = h || '<span class="small muted">Nothing saved yet.</span>';
+  }
+
+  /* ---------- settings view ---------- */
+  function renderProfit(c) {
+    var eff = c.hours ? c.total / c.hours : 0, h = "";
+    h += "<span>Your prices (before buffer)</span><b>" + naira(c.base) + "</b><span>Buffer (" + S.buffer + "%) plus rounding</span><b>" + naira(c.buffer) + "</b>";
+    if (c.rush) h += "<span>Priority start fee</span><b>" + naira(c.rush) + "</b>";
+    h += '<span class="tot">Total the client sees</span><b class="tot">' + naira(c.total) + "</b>";
+    h += "<span>Estimated hours</span><b>" + Math.round(c.hours) + " h</b><span>Effective rate</span><b class=\"" + (S.floor && eff < S.floor ? "bad" : "") + '">' + naira(eff) + "/h</b>";
+    h += "<span>Work days</span><b>" + (Math.round(c.days * 10) / 10) + "</b><span>Delivery shown to client</span><b>" + c.cal + " days</b>";
+    $("kv").innerHTML = h;
+    var sc = fitScale(), parts = [];
+    if (S.floor && eff && eff < S.floor) parts.push("Below your floor of " + naira(S.floor) + "/h.");
+    if (Q.lines.length) parts.push(sc >= 1 ? "Prints on one page." : "Prints on one page at " + Math.round(sc * 100) + "% size.");
+    $("fitMsg").textContent = parts.join(" ");
+  }
+  function renderPriceList() {
+    var f = ($("plFind").value || "").toLowerCase(), h = "", cats = [], n = 0;
+    catalog.forEach(function (it) { if (it.cat && cats.indexOf(it.cat) < 0) cats.push(it.cat); });
+    h += '<datalist id="catlist">' + cats.map(function (c) { return '<option value="' + esc(c) + '">'; }).join("") + "</datalist>";
+    catalog.forEach(function (it, ii) {
+      if (f && (it.name + " " + it.cat).toLowerCase().indexOf(f) < 0) return;
+      n++;
+      h += '<div class="pitem"><div class="phead"><div style="flex:2;min-width:200px"><label class="f">Item name</label><input type="text" value="' + esc(it.name) + '" data-ci="' + ii + '" data-f="name"></div><div style="flex:1;min-width:150px"><label class="f">Group</label><input type="text" list="catlist" value="' + esc(it.cat) + '" data-ci="' + ii + '" data-f="cat"></div><label class="chk" style="margin-top:18px"><input type="checkbox" data-ci="' + ii + '" data-f="rep"' + (it.rep ? " checked" : "") + '> can repeat at the repeat price</label><button class="btn alt sm" type="button" data-delitem="' + ii + '" style="margin-top:14px">Delete item</button></div>';
+      h += '<table class="lv"><thead><tr><th>Level (blank if only one)</th><th>Your price ₦</th><th>Client sees</th><th>Work days</th><th>Hours</th><th></th></tr></thead><tbody>';
+      it.tiers.forEach(function (t, ti) {
+        h += '<tr><td><input type="text" value="' + esc(t.l) + '" data-ci="' + ii + '" data-ti="' + ti + '" data-f="l" placeholder="e.g. Simple"></td><td><input type="number" min="0" step="1000" value="' + t.p + '" data-ci="' + ii + '" data-ti="' + ti + '" data-f="p">' + (t.g ? '<span class="guess">my guess</span>' : "") + '</td><td class="cs">' + naira(clientPrice(t.p)) + '</td><td><input type="number" min="0" step="0.25" value="' + t.d + '" data-ci="' + ii + '" data-ti="' + ti + '" data-f="d"></td><td><input type="number" min="0" step="1" value="' + t.h + '" data-ci="' + ii + '" data-ti="' + ti + '" data-f="h"></td><td>' + (it.tiers.length > 1 ? '<button class="x" type="button" data-deltier="' + ii + ":" + ti + '" aria-label="Remove level">✕</button>' : "") + "</td></tr>";
+      });
+      h += '</tbody></table><button class="btn alt sm" type="button" data-addtier="' + ii + '" style="margin-top:6px">+ Add a level</button></div>';
+    });
+    $("pl").innerHTML = h || '<p class="small muted">No items match.</p>';
+    $("itemCount").textContent = catalog.length + " items";
+  }
+  function syncSettings() {
+    var m = { buffer: "buffer", repeat: "repeat", floor: "floor", daysPerWeek: "dpw", delay: "delay", rush: "rush", validDays: "valid", pin: "pin", b1: "b1", b2: "b2", b3: "b3", defNotes: "defNotes" };
+    Object.keys(m).forEach(function (k) { $(m[k]).value = S[k] === undefined ? "" : S[k]; });
+    $("rushOn").checked = !!S.rushOn;
+  }
+  function syncQuote() { ["client", "contact", "title", "date", "notes"].forEach(function (k) { $(k).value = Q[k] || ""; }); }
+
+  function renderAll() {
+    var c = calc();
+    renderPalette(); renderLines(c); renderPays(c); renderPass(); renderPaper(c); renderTotals(c);
+    if (mode === "set") { renderProfit(c); }
+    lset(LS.set, S); lset(LS.cat, catalog);
+  }
+  function renderQuickOutputs() { var c = calc(); renderPaper(c); renderTotals(c); if (mode === "set") renderProfit(c); }
+
+  /* ---------- presets ---------- */
+  function L(id, tier, qty, rep) { var it = item(id); if (!it) return null; return { id: uid++, itemId: id, tier: Math.min(tier || 0, it.tiers.length - 1), qty: qty || 1, repeatOn: rep === undefined ? !!it.rep : rep }; }
+  function launchLines() { return [L("vsl_page", 0, 1), L("form_logic", 0, 4, true), L("auto", 1, 1), L("whatsapp", 0, 1), L("ga4", 1, 1)]; }
+  function convertLines() { return launchLines().concat([L("booking", 1, 1), L("paystack", 1, 1), L("followup", 0, 1)]); }
+  function fullLines() { var ls = convertLines(); ls.forEach(function (l) { if (l && l.itemId === "ga4") l.tier = Math.min(2, item("ga4").tiers.length - 1); }); return ls.concat([L("domain", 1, 1), L("designed_page", 0, 8, true), L("seo", 1, 1), L("pixel", 1, 1), L("cookie", 0, 1), L("upload_form", 0, 1), L("training", 0, 1)]); }
+  function loadPreset(k) {
+    var ls = k === "clear" ? [] : k === "launch" ? launchLines() : k === "convert" ? convertLines() : fullLines();
+    Q.lines = ls.filter(Boolean);
+    if (k !== "clear" && (!Q.title || /^Guided sales system: /.test(Q.title))) { Q.title = "Guided sales system: " + (k === "launch" ? "Launch" : k === "convert" ? "Convert" : "Full growth"); $("title").value = Q.title; }
+    renderAll();
+  }
+
+  /* ---------- mode switching ---------- */
+  function setMode(m) {
+    if (m === "set" && S.pin) { var p = window.prompt("Settings PIN"); if (p === null) return; if (p !== String(S.pin)) { window.alert("Wrong PIN"); return; } }
+    mode = m; $("viewLive").hidden = m !== "live"; $("viewSet").hidden = m !== "set";
+    $("modeBtn").textContent = m === "live" ? "Settings" : "Back to live quote";
+    $("modeNote").textContent = m === "live" ? "Live quote. Safe to share your screen." : "Private settings. Do not share your screen here.";
+    document.body.className = m === "set" ? "is-set" : "";
+    if (m === "set") { syncSettings(); renderPriceList(); } else { syncQuote(); }
+    renderAll(); window.scrollTo(0, 0);
+  }
+
+  /* ---------- text, save, backup ---------- */
+  function textQuote() {
+    var c = calc(), s = ["Quotation " + Q.ref + " · " + fmtDate(Q.date), "For: " + (Q.client || "-") + (Q.title ? " · " + Q.title : ""), ""];
+    c.rows.forEach(function (r, i) { s.push((i + 1) + ". " + r.name + (r.sub ? " (" + r.sub + ")" : "") + (r.l.qty > 1 ? " x" + r.l.qty : "") + ": " + naira(r.client)); });
+    if (c.rush) s.push("Priority start: " + naira(c.rush));
+    s.push("", "Total: " + naira(c.total), "Estimated delivery: about " + c.cal + " days from kickoff");
+    if (S.pays.length) s.push("Payment: " + c.pays.map(function (p) { return p.l + " " + naira(p.a); }).join(", "));
+    s.push("Valid until " + validUntil()); return s.join("\n");
+  }
+  function copyText() {
+    var txt = textQuote(), m = $("copyMsg");
+    function fb() { var ta = document.createElement("textarea"); ta.value = txt; document.body.appendChild(ta); ta.select(); var ok = false; try { ok = document.execCommand("copy"); } catch (e) {} document.body.removeChild(ta); m.textContent = ok ? "Copied." : "Could not copy."; }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(function () { m.textContent = "Copied."; }, fb); else fb();
+  }
+  function saveQuote() {
+    var name = $("saveName").value.trim() || (Q.client || "Quote") + " " + Q.ref, list = lget(LS.saved, []);
+    list.unshift({ name: name, q: JSON.parse(JSON.stringify(Q)), pays: JSON.parse(JSON.stringify(S.pays)) });
+    lset(LS.saved, list.slice(0, 40)); renderSaved();
+  }
+  function loadQuote(i) {
+    var s = lget(LS.saved, [])[i]; if (!s) return;
+    Q = s.q; S.pays = s.pays; uid = Q.lines.reduce(function (m, l) { return Math.max(m, l.id + 1); }, uid); syncQuote(); renderAll();
+  }
+  function exportBackup() {
+    var data = JSON.stringify({ v: 2, catalog: catalog, settings: S, saved: lget(LS.saved, []) }, null, 1);
+    var a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([data], { type: "application/json" })); a.download = "quotation-calculator-backup-" + today() + ".json"; document.body.appendChild(a); a.click(); document.body.removeChild(a); $("bkMsg").textContent = "Backup downloaded.";
+  }
+  function importBackup(file) {
+    var r = new FileReader();
+    r.onload = function () { try { var d = JSON.parse(r.result); if (!d.catalog || !d.settings) throw 0; catalog = d.catalog; S = Object.assign({}, DEFAULT_SETTINGS, d.settings); lset(LS.saved, d.saved || []); lset(LS.cat, catalog); lset(LS.set, S); $("bkMsg").textContent = "Restored."; syncSettings(); renderPriceList(); renderSaved(); renderAll(); } catch (e) { $("bkMsg").textContent = "That file is not a valid backup."; } };
+    r.readAsText(file);
+  }
+
+  /* ---------- events ---------- */
+  document.addEventListener("click", function (e) {
+    var t = e.target, g = function (a) { return t.closest("[" + a + "]"); }, x;
+    if (t.id === "modeBtn") { setMode(mode === "live" ? "set" : "live"); return; }
+    if ((x = g("data-add"))) { var l = L(x.getAttribute("data-add")); if (l) { Q.lines.push(l); renderAll(); } return; }
+    if ((x = g("data-preset"))) { loadPreset(x.getAttribute("data-preset")); return; }
+    if ((x = g("data-step"))) { var ln = Q.lines.filter(function (q) { return q.id == x.getAttribute("data-step"); })[0]; if (ln) { ln.qty = Math.max(1, ln.qty + parseInt(x.getAttribute("data-d"), 10)); renderAll(); } return; }
+    if ((x = g("data-del"))) { Q.lines = Q.lines.filter(function (q) { return q.id != x.getAttribute("data-del"); }); renderAll(); return; }
+    if ((x = g("data-delpay"))) { S.pays.splice(+x.getAttribute("data-delpay"), 1); renderAll(); return; }
+    if ((x = g("data-delpass"))) { Q.pass.splice(+x.getAttribute("data-delpass"), 1); renderAll(); return; }
+    if (t.id === "addPay") { S.pays.push({ l: "Milestone", p: 0 }); renderAll(); return; }
+    if (t.id === "addPass") { Q.pass.push({ n: "", a: "" }); renderAll(); return; }
+    if (t.id === "cAdd") { var nm = $("cName").value.trim(), pr = num($("cPrice").value, NaN); if (!nm || !isFinite(pr) || $("cPrice").value === "") { $("cName").focus(); return; } Q.lines.push({ id: uid++, custom: true, name: nm, price: pr, qty: 1, days: num($("cDays").value, 1), repeatOn: false }); $("cName").value = ""; $("cPrice").value = ""; $("cDays").value = ""; renderAll(); return; }
+    if (t.id === "printBtn") { window.print(); return; }
+    if (t.id === "copyBtn") { copyText(); return; }
+    if (t.id === "saveBtn") { saveQuote(); return; }
+    if ((x = g("data-load"))) { loadQuote(+x.getAttribute("data-load")); return; }
+    if ((x = g("data-delsaved"))) { var ls = lget(LS.saved, []); ls.splice(+x.getAttribute("data-delsaved"), 1); lset(LS.saved, ls); renderSaved(); return; }
+    if (t.id === "newItem") { catalog.unshift({ id: "c" + Date.now(), cat: "My items", name: "New item", rep: false, tiers: [T("", 0, 1, 8)] }); $("plFind").value = ""; renderPriceList(); renderAll(); var f = document.querySelector('#pl [data-f="name"]'); if (f) { f.focus(); f.select(); } return; }
+    if ((x = g("data-delitem"))) { var i = +x.getAttribute("data-delitem"); if (window.confirm('Delete "' + catalog[i].name + '" from the price list?')) { var id = catalog[i].id; catalog.splice(i, 1); Q.lines = Q.lines.filter(function (q) { return q.custom || q.itemId !== id; }); renderPriceList(); renderAll(); } return; }
+    if ((x = g("data-addtier"))) { var it = catalog[+x.getAttribute("data-addtier")], lastT = it.tiers[it.tiers.length - 1]; it.tiers.push(T("New level", lastT.p, lastT.d, lastT.h)); renderPriceList(); renderAll(); return; }
+    if ((x = g("data-deltier"))) { var pr2 = x.getAttribute("data-deltier").split(":"); catalog[+pr2[0]].tiers.splice(+pr2[1], 1); renderPriceList(); renderAll(); return; }
+    if (t.id === "expBtn") { exportBackup(); return; }
+    if (t.id === "resetBtn") { if (!resetArm) { resetArm = true; t.textContent = "Click again to confirm. This erases your price edits."; return; } catalog = JSON.parse(JSON.stringify(DEFAULT_CATALOG)); resetArm = false; t.textContent = "Reset price list to my starting values"; $("resetMsg").textContent = "Reset."; renderPriceList(); renderAll(); }
+  });
+  document.addEventListener("input", function (e) {
+    var t = e.target, q = t.getAttribute("data-q");
+    if (q) { Q[q] = t.value; renderQuickOutputs(); }
+    else if (t.id === "find") renderPalette();
+    else if (t.id === "plFind") renderPriceList();
+  });
+  document.addEventListener("change", function (e) {
+    var t = e.target, f = t.getAttribute("data-f"), s = t.getAttribute("data-s");
+    if (t.id === "impFile") { if (t.files[0]) importBackup(t.files[0]); t.value = ""; return; }
+    if (t.id === "rushOn") { S.rushOn = t.checked; renderAll(); return; }
+    if (s) { S[s] = (s === "floor" ? (t.value === "" ? "" : num(t.value)) : (s === "pin" || s === "b1" || s === "b2" || s === "b3" || s === "defNotes") ? t.value : num(t.value)); if (s === "defNotes") { renderAll(); return; } renderPriceList(); renderAll(); return; }
+    if (!f) return;
+    if (t.hasAttribute("data-line")) { var ln = Q.lines.filter(function (q) { return q.id == t.getAttribute("data-line"); })[0]; if (!ln) return; if (f === "tier") ln.tier = +t.value; else if (f === "qty") ln.qty = Math.max(1, Math.round(num(t.value, 1))); else if (f === "repeatOn") ln.repeatOn = t.checked; else if (f === "price") ln.price = num(t.value); renderAll(); return; }
+    if (t.hasAttribute("data-pay")) { S.pays[+t.getAttribute("data-pay")][f] = f === "p" ? num(t.value) : t.value; renderAll(); return; }
+    if (t.hasAttribute("data-pass")) { Q.pass[+t.getAttribute("data-pass")][f] = t.value; renderAll(); return; }
+    if (t.hasAttribute("data-ci")) {
+      var it = catalog[+t.getAttribute("data-ci")];
+      if (f === "name" || f === "cat") it[f] = t.value; else if (f === "rep") it.rep = t.checked;
+      else { var tr = it.tiers[+t.getAttribute("data-ti")]; if (f === "l") tr.l = t.value; else { tr[f] = num(t.value); if (f === "p") tr.g = 0; } }
+      renderPriceList(); renderAll();
+    }
+  });
+  window.addEventListener("beforeprint", function () { var p = $("paper"), sc = fitScale(); p.style.zoom = sc < 1 ? sc : ""; });
+  window.addEventListener("afterprint", function () { $("paper").style.zoom = ""; });
+  $("impFile").addEventListener("click", function (e) { e.stopPropagation(); });
+
+  syncQuote(); renderSaved(); loadPreset("launch");
+})();
+
+</script>
+</body>
+</html>"robots" content="noindex, nofollow">
 <title>Quotation Calculator</title>
 <style>
 /* Layout: builder on the left (private), quote paper and internal summary on the right. Only the paper prints. */
